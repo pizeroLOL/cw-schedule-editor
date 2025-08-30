@@ -1,19 +1,18 @@
-import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { EditorNode, EditorSchedule, NodeType, PartType } from '@/model'
+import type { EditorCreatePart, EditorNode, EditorSchedule } from '@/model'
 
 export const useScheduleStore = defineStore('schedule', {
   state: () => ({ schdule: [] as EditorSchedule, courseName: [] as string[] }),
   actions: {
-    addPart(name: string, type: PartType, hour: number, minute: number) {
+    addPart(part: EditorCreatePart) {
       const i = () => [] as EditorNode[]
       this.schdule.push({
-        name,
-        type,
-        hour,
-        minute,
+        ...part,
         node: [i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i()],
       })
+    },
+    addNode(partIndex: number, weekdayIndex: number, node: EditorNode) {
+      this.schdule[partIndex].node[weekdayIndex].push(node)
     },
   },
 })
