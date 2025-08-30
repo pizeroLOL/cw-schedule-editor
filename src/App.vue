@@ -36,16 +36,24 @@ const weekdayIndex = ref(0 as NodeWeekdayIndex)
     <section class="grid gap-2">
       <label class="grid gap-1">
         <div>名称</div>
-        <input class="rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700" type="text" placeholder="开始时间的名字"
-          v-model.trim="addPartState.name" @input="
+        <input
+          class="rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
+          type="text"
+          placeholder="开始时间的名字"
+          v-model.trim="addPartState.name"
+          @input="
             () => {
               addPartState.deny = addPartState.name.length === 0
             }
-          " />
+          "
+        />
       </label>
       <label class="grid gap-1">
         <div>类型</div>
-        <select class="rounded-md bg-neutral-300 p-2 dark:bg-neutral-700" v-model="addPartState.type">
+        <select
+          class="rounded-md bg-neutral-300 p-2 dark:bg-neutral-700"
+          v-model="addPartState.type"
+        >
           <option value="part">上课</option>
           <option value="break">休息</option>
         </select>
@@ -53,24 +61,40 @@ const weekdayIndex = ref(0 as NodeWeekdayIndex)
       <div class="grid gap-1">
         <div>时间</div>
         <div class="flex gap-2">
-          <input class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700" type="number" min="0" max="23"
-            v-model="addPartState.hour" placeholder="小时" />
+          <input
+            class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
+            type="number"
+            min="0"
+            max="23"
+            v-model="addPartState.hour"
+            placeholder="小时"
+          />
           <div>:</div>
-          <input class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700" type="number" min="0" max="59"
-            v-model="addPartState.minute" placeholder="分钟" />
+          <input
+            class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
+            type="number"
+            min="0"
+            max="59"
+            v-model="addPartState.minute"
+            placeholder="分钟"
+          />
         </div>
       </div>
     </section>
     <section class="grid grid-cols-2 gap-2 *:rounded-md *:px-2 *:py-1">
-      <CustomButton @click="
-        () => {
-          addPartState = defaultAddPartState()
-        }
-      ">
+      <CustomButton
+        @click="
+          () => {
+            addPartState = defaultAddPartState()
+          }
+        "
+      >
         取消
       </CustomButton>
-      <PositiveButton class="bg-green-700 transition duration-100 hover:bg-green-600"
-        v-model:disabled="addPartState.deny" @click="
+      <PositiveButton
+        class="bg-green-700 transition duration-100 hover:bg-green-600"
+        v-model:disabled="addPartState.deny"
+        @click="
           () => {
             if (addPartState.deny) {
               return
@@ -83,13 +107,16 @@ const weekdayIndex = ref(0 as NodeWeekdayIndex)
             )
             addPartState = defaultAddPartState()
           }
-        ">
+        "
+      >
         添加
       </PositiveButton>
     </section>
   </CustomDialog>
 
-  <nav class="sticky grid h-10 items-center-safe justify-center-safe bg-neutral-200 px-4 py-2 dark:bg-neutral-800">
+  <nav
+    class="sticky grid h-10 items-center-safe justify-center-safe bg-neutral-200 px-4 py-2 dark:bg-neutral-800"
+  >
     <h1 class="font-semibold hover:text-cyan-700 dark:hover:text-cyan-300">
       <span class="text-cyan-700 dark:text-cyan-300">CW</span>EE
     </h1>
@@ -98,11 +125,20 @@ const weekdayIndex = ref(0 as NodeWeekdayIndex)
     <section class="grid grow grid-cols-2 gap-4 p-4">
       <section class="flex flex-col gap-4">
         <h2 class="text-4xl">开始时间</h2>
-        <section class="min-h-10 grow rounded-md border border-neutral-200 p-2 dark:border-neutral-800">
-          <div class="w-full rounded-md bg-neutral-800 px-2 py-1 aria-selected:bg-neutral-700"
-            :aria-selected="partCursor == index" @click="() => {
-              partCursor = index
-            }" v-for="(value, index) in schedule.schdule" :key="index">
+        <section
+          class="min-h-10 grow rounded-md border border-neutral-200 p-2 dark:border-neutral-800"
+        >
+          <div
+            class="w-full rounded-md bg-neutral-800 px-2 py-1 aria-selected:bg-neutral-700"
+            :aria-selected="partCursor == index"
+            @click="
+              () => {
+                partCursor = index
+              }
+            "
+            v-for="(value, index) in schedule.schdule"
+            :key="index"
+          >
             {{ value.name }}
           </div>
         </section>
@@ -118,7 +154,9 @@ const weekdayIndex = ref(0 as NodeWeekdayIndex)
             </option>
           </select>
         </div>
-        <section class="min-h-10 grow rounded-md border border-neutral-200 dark:border-neutral-800"></section>
+        <section
+          class="min-h-10 grow rounded-md border border-neutral-200 dark:border-neutral-800"
+        ></section>
         <CustomButton @click="addPartState.show = true" class="py-1">添加</CustomButton>
       </section>
     </section>
