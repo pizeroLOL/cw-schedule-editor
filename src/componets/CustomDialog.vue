@@ -5,8 +5,8 @@ const isOpen = defineModel<boolean>('isOpen')
 const customDialog = useTemplateRef('dialog')
 watch(
   () => isOpen.value,
-  (now, acc) => {
-    if (now === acc || customDialog.value === null) {
+  (now) => {
+    if (customDialog.value === null) {
       return
     }
     if (now) {

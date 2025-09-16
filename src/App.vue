@@ -1,198 +1,105 @@
 <script setup lang="ts">
-import CustomDialog from '@/componets/CustomDialog.vue'
 import { computed, ref } from 'vue'
-import type { EditorNode, NodeType, NodeWeekdayIndex, PartType } from './model'
+import type { EditorDialogPart, EditorNode, EditorSchedule, NodeWeekdayIndex } from './model'
+import { formatAbout, minuteToTime, dayName } from './utils.ts'
 import CustomButton from './componets/CustomButton.vue'
-import PositiveButton from './componets/PositiveButton.vue'
-import { useScheduleStore } from './stores/schedule'
+import PartDialog from './componets/PartDialog.vue'
+import NodeDialog from './componets/NodeDialog.vue'
 
-const schedule = useScheduleStore()
+const cwSchedule = ref({ schedule: [] as EditorSchedule, courseName: [] as string[] })
 
-const rawDayName = ['一', '二', '三', '四', '五', '六', '日']
-const formatDayName = (id: number) =>
-  `${Math.floor(id / 7) == 0 ? '单' : '双'}周 周${rawDayName[id % 7]}`
-const dayName = Array(14)
-  .fill(14)
-  .map((_, id) => ({
-    index: id,
-    value: formatDayName(id),
-  }))
-const defaultAddPartState = () => ({
-  show: false,
-  deny: true,
-  name: '',
-  type: 'part' as PartType,
-  hour: 0,
-  minute: 0,
-})
-const addPartState = ref(defaultAddPartState())
 const partCursor = ref(-1)
 const weekdayIndex = ref(0 as NodeWeekdayIndex)
-
-const defaultAddNodeState = () => ({
-  show: false,
-  deny: true,
-  name: '',
-  type: 'class' as NodeType,
-  dur: 0,
-})
-const addNodeState = ref(defaultAddNodeState())
 const canAddNode = computed(
-  () => partCursor.value >= 0 && partCursor.value < schedule.schdule.length,
+  () => partCursor.value >= 0 && partCursor.value < cwSchedule.value.schedule.length,
+)
+const currentStart = computed(() =>
+  canAddNode.value
+    ? cwSchedule.value.schedule[partCursor.value].hour * 60 +
+      cwSchedule.value.schedule[partCursor.value].minute
+    : 0,
 )
 const nowNodeList = computed(() =>
-  canAddNode.value ? schedule.schdule[partCursor.value].node[weekdayIndex.value] : [],
+  canAddNode.value ? cwSchedule.value.schedule[partCursor.value].node[weekdayIndex.value] : [],
 )
-const formatAbout = (data: EditorNode) =>
-  `${{ class: '上课', gap: '下课' }[data.type]} / ${data.dur} 分钟`
+
+const showPartDialog = ref(false)
+const partDialogState = ref(undefined as undefined | EditorDialogPart)
+const addPart = () => {
+  showPartDialog.value = true
+}
+const submitPart = (part: EditorDialogPart, acc?: EditorDialogPart) => {
+  if (acc === undefined) {
+    const i = () => [] as EditorNode[]
+    cwSchedule.value.schedule.push({
+      ...part,
+      node: [i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i(), i()],
+    })
+    partCursor.value = cwSchedule.value.schedule.length - 1
+    partDialogState.value = undefined
+    return
+  }
+  if (!canAddNode.value) {
+    partDialogState.value = undefined
+    // TODO: alert
+    return
+  }
+  cwSchedule.value.schedule[partCursor.value] = {
+    ...cwSchedule.value.schedule[partCursor.value],
+    ...part,
+  }
+  partDialogState.value = undefined
+}
+const delPart = (index: number) => {
+  cwSchedule.value.schedule = cwSchedule.value.schedule.filter((_, id) => id !== index)
+}
+const editPart = (index: number) => {
+  partDialogState.value = cwSchedule.value.schedule[index]
+  partCursor.value = index
+  showPartDialog.value = true
+}
+
+const nodeCursor = ref(-1)
+const showNodeDialog = ref(false)
+const nodeDialogState = ref(undefined as undefined | EditorNode)
+const addNode = () => {
+  showNodeDialog.value = true
+}
+const editNode = (index: number) => {
+  nodeDialogState.value = nowNodeList.value[index]
+  showNodeDialog.value = true
+}
+const delNode = (index: number) => {
+  if (!canAddNode.value) {
+    // TODO: alert
+    return
+  }
+  const currentNodes = cwSchedule.value.schedule[partCursor.value].node
+  currentNodes[weekdayIndex.value] = currentNodes[weekdayIndex.value].filter(
+    (_, id) => id !== index,
+  )
+}
+const submitNode = (now: EditorNode, acc?: EditorNode) => {
+  if (!canAddNode.value) {
+    // TODO: alert
+    nodeDialogState.value = undefined
+    return
+  }
+  const currentNodes = cwSchedule.value.schedule[partCursor.value].node[weekdayIndex.value]
+  if (acc === undefined) {
+    currentNodes.push(now)
+    nodeDialogState.value = undefined
+    nodeCursor.value = currentNodes.length - 1
+    return
+  }
+  cwSchedule.value.schedule[partCursor.value].node[weekdayIndex.value][nodeCursor.value] = now
+  nodeDialogState.value = undefined
+}
 </script>
 
 <template>
-  <CustomDialog v-model:is-open="addPartState.show">
-    <h2 class="text-2xl">添加开始时间</h2>
-    <section class="grid gap-2">
-      <label class="grid gap-1">
-        <div>名称</div>
-        <input
-          class="rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
-          type="text"
-          placeholder="开始时间的名字"
-          v-model.trim="addPartState.name"
-          @input="
-            () => {
-              addPartState.deny = addPartState.name.length === 0
-            }
-          "
-        />
-      </label>
-      <label class="grid gap-1">
-        <div>类型</div>
-        <select
-          class="rounded-md bg-neutral-300 p-2 dark:bg-neutral-700"
-          v-model="addPartState.type"
-        >
-          <option value="part">上课</option>
-          <option value="break">休息</option>
-        </select>
-      </label>
-      <div class="grid gap-1">
-        <div>时间</div>
-        <div class="flex gap-2">
-          <input
-            class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
-            type="number"
-            min="0"
-            max="23"
-            v-model="addPartState.hour"
-            placeholder="小时"
-          />
-          <div>:</div>
-          <input
-            class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
-            type="number"
-            min="0"
-            max="59"
-            v-model="addPartState.minute"
-            placeholder="分钟"
-          />
-        </div>
-      </div>
-    </section>
-    <section class="grid grid-cols-2 gap-2 *:rounded-md *:px-2 *:py-1">
-      <CustomButton
-        @click="
-          () => {
-            addPartState = defaultAddPartState()
-          }
-        "
-      >
-        取消
-      </CustomButton>
-      <PositiveButton
-        class="bg-green-700 transition duration-100 hover:bg-green-600"
-        v-model:disabled="addPartState.deny"
-        @click="
-          () => {
-            if (addPartState.deny) {
-              return
-            }
-            schedule.addPart(addPartState)
-            partCursor = schedule.schdule.length - 1
-            addPartState = defaultAddPartState()
-          }
-        "
-      >
-        添加
-      </PositiveButton>
-    </section>
-  </CustomDialog>
-
-  <CustomDialog v-model:is-open="addNodeState.show">
-    <h2 class="text-2xl">添加及节点</h2>
-    <section class="grid gap-2">
-      <label class="grid gap-1">
-        <div>名称</div>
-        <input
-          class="rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
-          type="text"
-          placeholder="开始时间的名字"
-          v-model.trim="addNodeState.name"
-          @input="
-            () => {
-              addNodeState.deny = addNodeState.name.length === 0
-            }
-          "
-        />
-      </label>
-      <label class="grid gap-1">
-        <div>类型</div>
-        <select
-          class="rounded-md bg-neutral-300 p-2 dark:bg-neutral-700"
-          v-model="addNodeState.type"
-        >
-          <option value="class">上课</option>
-          <option value="gap">课间</option>
-        </select>
-      </label>
-      <div class="grid gap-1">
-        <div>时间</div>
-        <input
-          class="grow rounded-md bg-neutral-300 px-2 py-1 dark:bg-neutral-700"
-          type="number"
-          min="0"
-          v-model="addNodeState.dur"
-          placeholder="分钟"
-        />
-      </div>
-    </section>
-    <section class="grid grid-cols-2 gap-2 *:rounded-md *:px-2 *:py-1">
-      <CustomButton
-        @click="
-          () => {
-            addNodeState = defaultAddNodeState()
-          }
-        "
-      >
-        取消
-      </CustomButton>
-      <PositiveButton
-        class="bg-green-700 transition duration-100 hover:bg-green-600"
-        :disabled="addNodeState.deny"
-        @click="
-          () => {
-            if (addNodeState.deny) {
-              return
-            }
-            schedule.addNode(partCursor, weekdayIndex, addNodeState)
-            addNodeState = defaultAddNodeState()
-          }
-        "
-      >
-        添加
-      </PositiveButton>
-    </section>
-  </CustomDialog>
-
+  <PartDialog :submit="submitPart" :data="partDialogState" v-model="showPartDialog" />
+  <NodeDialog :submit="submitNode" :data="nodeDialogState" v-model="showNodeDialog" />
   <nav
     class="sticky grid h-10 items-center-safe justify-center-safe bg-neutral-200 px-4 py-2 dark:bg-neutral-800"
   >
@@ -201,40 +108,47 @@ const formatAbout = (data: EditorNode) =>
     </h1>
   </nav>
   <section class="flex min-h-[calc(100dvh-2.5rem)] flex-col">
-    <section class="grid grow grid-cols-2 gap-4 p-4">
+    <section class="flex flex-col gap-4 p-4 sm:grid sm:grow sm:grid-cols-2">
       <section class="flex flex-col gap-4">
         <h2 class="text-4xl">开始时间</h2>
         <section
           class="flex min-h-10 grow flex-col gap-2 rounded-md border border-neutral-200 p-2 dark:border-neutral-800"
         >
-          <div
-            class="flex w-full gap-2 rounded-md bg-neutral-800 px-2 py-1 aria-selected:bg-neutral-300 dark:aria-selected:bg-neutral-700"
+          <button
+            class="flex flex-wrap gap-2 rounded-md border border-stone-200 px-2 py-1 aria-selected:bg-neutral-200 sm:grid sm:grid-cols-[1fr_auto] dark:border-stone-800 dark:aria-selected:bg-neutral-800"
             :aria-selected="partCursor == index"
             @click="
               () => {
                 partCursor = index
               }
             "
-            v-for="(value, index) in schedule.schdule"
+            v-for="(value, index) in cwSchedule.schedule"
             :key="index"
           >
-            <div>
-              {{ value.name }}
+            <div class="flex w-full flex-wrap gap-2">
+              <div>
+                {{ value.name }}
+              </div>
+              <div class="text-neutral-600 dark:text-neutral-400">
+                {{ minuteToTime(value.hour * 60 + value.minute) }}
+              </div>
             </div>
-            <div class="text-neutral-600 dark:text-neutral-400">
-              {{ value.hour.toString().padStart(2, '0') }}:{{
-                value.minute.toString().padStart(2, '0')
-              }}
+            <div class="flex flex-wrap gap-2">
+              <CustomButton class="px-2" @click="() => editPart(index)">修改</CustomButton>
+              <CustomButton class="px-2" @click="() => delPart(index)">删除</CustomButton>
             </div>
-          </div>
+          </button>
         </section>
-        <CustomButton @click="addPartState.show = true" class="py-1">添加</CustomButton>
+        <CustomButton @click="addPart" class="py-1">添加</CustomButton>
       </section>
       <section class="flex flex-col gap-4">
         <div class="flex h-fit">
           <h2 class="text-4xl">Node</h2>
           <section class="grow"></section>
-          <select class="block" v-model="weekdayIndex">
+          <select
+            class="block h-fit self-center rounded-md bg-neutral-300 px-2 py-1 hover:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+            v-model="weekdayIndex"
+          >
             <option :value="index" v-for="{ index, value } in dayName" :key="index">
               {{ value }}
             </option>
@@ -244,21 +158,24 @@ const formatAbout = (data: EditorNode) =>
           class="flex min-h-10 grow flex-col gap-2 rounded-md border border-neutral-200 p-2 dark:border-neutral-800"
         >
           <div
-            class="flex w-full gap-2 rounded-md bg-neutral-800 px-2 py-1"
+            class="flex w-full flex-wrap gap-2 rounded-md bg-neutral-800 px-2 py-1 sm:grid sm:grid-cols-[1fr_auto]"
             v-for="(value, index) in nowNodeList"
             :key="index"
           >
-            <div>{{ value.name }}</div>
-            <div class="text-neutral-600 dark:text-neutral-400">{{ formatAbout(value) }}</div>
+            <div class="flex flex-wrap gap-2">
+              <div>{{ value.name }}</div>
+              <div class="text-neutral-600 dark:text-neutral-400">
+                {{ formatAbout(value, index, nowNodeList, currentStart) }}
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 *:px-2">
+              <CustomButton @click="() => editNode(index)"> 修改 </CustomButton>
+              <CustomButton @click="() => delNode(index)"> 删除 </CustomButton>
+            </div>
           </div>
         </section>
-        <CustomButton @click="addNodeState.show = true" class="py-1" :disabled="!canAddNode"
-          >添加</CustomButton
-        >
+        <CustomButton @click="addNode" class="py-1" :disabled="!canAddNode">添加</CustomButton>
       </section>
     </section>
   </section>
-  <!-- <RouterView></RouterView> -->
 </template>
-
-<style scoped></style>

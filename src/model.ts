@@ -34,6 +34,6 @@ export type EditorPart = {
   ]
 }
 
-export type EditorCreatePart = Pick<EditorPart, 'name' | 'id' | 'hour' | 'minute' | 'type'>
+export type EditorDialogPart = Pick<EditorPart, 'name' | 'id' | 'hour' | 'minute' | 'type'>
 
 export type EditorSchedule = EditorPart[]
